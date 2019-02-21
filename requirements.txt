@@ -1,0 +1,6 @@
+jwt
+pyjwt
+requests
+pymysql
+trender
+configparser
