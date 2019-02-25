@@ -6,6 +6,4 @@ Context: message-@cid
 Extension: s
 Priority: 1
 Archive: Yes
-Set: ID=@cid
-Set: NUMBER=@phone
 

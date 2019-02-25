@@ -8,6 +8,7 @@ import hashlib
 import requests
 import pymysql.cursors
 import configparser
+import datetime
 from trender import TRender
 
 config = configparser.ConfigParser()
@@ -75,21 +76,24 @@ def create_dialplan(data):
     prefix = '/var/lib/asterisk/sounds/yandex/names/'
     namefile = get_tts(prefix, nametext)
 
-    tomorrowdate = 'завтра ' + data['day'] + ' ' + data['month']
+    tomorrowdate = 'завтра ' + str(data['day']) + ' ' + data['month']
     prefix = '/var/lib/asterisk/sounds/yandex/dates/'
     datefile = get_tts(prefix, tomorrowdate)
 
-    if data['minutes'] == '0':
-        data['minutes'] = ' ровно.'
+    if data['minutes'] == 0:
+        data['minutes'] = 'ровно.'
     else:
-        data['minutes'] = data['minutes'] + ' минут.'
-    tomorrowtime = ' в ' + data['hours'] + ' часов ' + data['minutes']
+        data['minutes'] = str(data['minutes']) + ' минут.'
+    tomorrowtime = ' в ' + str(data['hours']) + ' часов ' + str(data['minutes'])
     prefix = '/var/lib/asterisk/sounds/yandex/times/'
     timefile = get_tts(prefix, tomorrowtime)
+
+    print('{} {} {}{}\n'.format(data['id'], nametext, tomorrowdate, tomorrowtime))
 
     output = TRender('extention.tpl', path=config['general']['template_path']).render(
         {
             'cid': data['id'],
+            'number': data['phone'],
             'namefile': namefile,
             'datefile': datefile,
             'timefile': timefile
@@ -114,6 +118,19 @@ def create_callfiles(data):
 folder = '/etc/asterisk/call-client'
 for the_file in os.listdir(folder):
     file_path = os.path.join(folder, the_file)
+    if the_file == "empty.conf":
+        continue
+    try:
+        if os.path.isfile(file_path):
+            os.unlink(file_path)
+    except Exception as e:
+        print(e)
+
+folder = '/opt/call-scheduler/callfiles'
+for the_file in os.listdir(folder):
+    file_path = os.path.join(folder, the_file)
+    if the_file == ".gitignore":
+        continue
     try:
         if os.path.isfile(file_path):
             os.unlink(file_path)
@@ -121,7 +138,9 @@ for the_file in os.listdir(folder):
         print(e)
 
 with connection.cursor() as cursor:
-    sql = "SELECT * FROM scheduled_calls WHERE lastcall IS NULL or laststatus IS NULL"
+    now = datetime.datetime.now()
+    sql = "SELECT * FROM scheduled_calls WHERE lastcall IS NULL and laststatus IS NULL and year>='{}' and nmonth>='{}' and day='{}'".format(now.year, now.month, now.day + 1)
+    print(sql)
     cursor.execute(sql)
     for data in cursor.fetchall():
         print(data)

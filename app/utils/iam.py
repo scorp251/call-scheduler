@@ -100,10 +100,11 @@ class IAM(object):
     def __checkExpired(self):
         now = datetime.utcnow()
         dt = datetime.strptime(self._IAM['expiresAt'], '%Y-%m-%d' + 'T' + '%H:%M:%S' + '.' + '%f' + 'Z')
-        log.debug('IAM Key expieres in {}'.format(dt - now))
         if dt < now:
             log.info('IAM key expiered. Updating')
             self.__updateIAM()
+        else:
+            log.debug('IAM Key expieres in {}'.format(dt - now))
 
     def get(self):
         self.__checkExpired()

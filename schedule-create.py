@@ -3,6 +3,7 @@
 import os
 import pymysql.cursors
 import configparser
+import datetime
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -32,7 +33,6 @@ connection = pymysql.connect(host=config['mysql']['host'],
 
 
 with os.popen("iconv -f cp1251 -t utf-8 " + config['general']['schedule_filename']) as stream:
-    print(stream)
     counter = 0
     for line in stream.readlines():
         line = line.rstrip()
@@ -42,6 +42,7 @@ with os.popen("iconv -f cp1251 -t utf-8 " + config['general']['schedule_filename
         d = adata[0].strip('"').split('-')
         year = d[0]
         month = monthdict[d[1]]
+        nmonth = d[1]
         day = int(d[2])
         # Getting hours and minutes
         d = adata[1].strip('"').split('.')
@@ -73,7 +74,19 @@ with os.popen("iconv -f cp1251 -t utf-8 " + config['general']['schedule_filename
             phone = '8' + phone[1:]
         if list(phone)[0] != '8':
             print("Error in file on line {}: Invalid phone number {}".format(counter, phone))
-        sql = "INSERT INTO scheduled_calls (year, month, day, hours, minutes, fname, sname, phone) VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')".format(year, month, day, hours, minutes, fname, sname, phone)
+
+        now = datetime.datetime.now()
+        if int(year) != now.year:
+            print("Error in file on line {}: year {}".format(counter, year))
+            continue
+        if int(nmonth) < now.month:
+            print("Error in file on line {}: month in the past {}".format(counter, nmonth))
+            continue
+        if int(day) < now.day + 1:
+            print("Error in file on line {}: day {}".format(counter, day))
+            continue
+
+        sql = "INSERT INTO scheduled_calls (year, month, nmonth, day, hours, minutes, fname, sname, phone) VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')".format(year, month, nmonth, day, hours, minutes, fname, sname, phone)
 #        print(sql)
 
         try:
@@ -81,6 +94,6 @@ with os.popen("iconv -f cp1251 -t utf-8 " + config['general']['schedule_filename
                 cursor.execute(sql)
             connection.commit()
         except Exception as e:
-            print('Error inserting in mysql database: {}'.format(e))
+            print('Error inserting in mysql database line {}: {}'.format(counter, e))
 
 connection.close()
