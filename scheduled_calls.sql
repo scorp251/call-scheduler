@@ -10,6 +10,7 @@ CREATE TABLE `scheduled_calls` (
   `fname` varchar(45) DEFAULT NULL,
   `sname` varchar(45) DEFAULT NULL,
   `phone` varchar(11) DEFAULT NULL,
+  `address` varchar(255) DEFAULT NULL,
   `lastcall` datetime DEFAULT NULL,
   `laststatus` varchar(45) DEFAULT NULL,
   `needredial` tinyint(4) DEFAULT 0,

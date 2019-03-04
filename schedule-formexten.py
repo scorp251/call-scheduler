@@ -9,6 +9,7 @@ import requests
 import pymysql.cursors
 import configparser
 import datetime
+import time
 from trender import TRender
 
 config = configparser.ConfigParser()
@@ -69,12 +70,14 @@ def get_tts(prefix, text):
     with open(prefix + fname + '.opus', "wb") as f:
         print('Storing tts "' + text + '" in "' + prefix + fname + '.opus')
         f.write(resp.content)
+        time.sleep(1)
         return fname
 
 def create_dialplan(data):
-    nametext = data['fname'] + ' ' + data['sname'] + '.'
-    prefix = '/var/lib/asterisk/sounds/yandex/names/'
-    namefile = get_tts(prefix, nametext)
+    namefile = ''
+#    nametext = data['fname'] + ' ' + data['sname'] + '.'
+#    prefix = '/var/lib/asterisk/sounds/yandex/names/'
+#    namefile = get_tts(prefix, nametext)
 
     tomorrowdate = 'завтра ' + str(data['day']) + ' ' + data['month']
     prefix = '/var/lib/asterisk/sounds/yandex/dates/'
@@ -88,7 +91,14 @@ def create_dialplan(data):
     prefix = '/var/lib/asterisk/sounds/yandex/times/'
     timefile = get_tts(prefix, tomorrowtime)
 
-    print('{} {} {}{}\n'.format(data['id'], nametext, tomorrowdate, tomorrowtime))
+    addressfile=''
+    addresstext = data['address']
+    if(len(addresstext) > 1):
+        prefix = '/var/lib/asterisk/sounds/yandex/address/'
+        addressfile = get_tts(prefix, 'По адресу, г. ' + addresstext)
+
+#    print('{} {} {}{} {}\n'.format(data['id'], nametext, tomorrowdate, tomorrowtime, addresstext))
+    print('{} {}{} {}\n'.format(data['id'], tomorrowdate, tomorrowtime, addresstext))
 
     output = TRender('extention.tpl', path=config['general']['template_path']).render(
         {
@@ -96,7 +106,8 @@ def create_dialplan(data):
             'number': data['phone'],
             'namefile': namefile,
             'datefile': datefile,
-            'timefile': timefile
+            'timefile': timefile,
+            'addressfile': addressfile
         }
         )
     f = open('{}/context-{}.conf'.format(config['general']['dialplan_files'], data['id']), 'w')
@@ -139,8 +150,9 @@ for the_file in os.listdir(folder):
 
 with connection.cursor() as cursor:
     now = datetime.datetime.now()
-    sql = "SELECT * FROM scheduled_calls WHERE lastcall IS NULL and laststatus IS NULL and year>='{}' and nmonth>='{}' and day='{}'".format(now.year, now.month, now.day + 1)
-    print(sql)
+    tom = datetime.datetime.now() + datetime.timedelta(days=1)
+    sql = "SELECT * FROM scheduled_calls WHERE lastcall IS NULL and laststatus IS NULL and year>='{}' and nmonth>='{}' and day='{}'".format(tom.year, tom.month, tom.day)
+#    print(sql)
     cursor.execute(sql)
     for data in cursor.fetchall():
         print(data)
